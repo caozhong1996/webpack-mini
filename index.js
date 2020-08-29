@@ -2,25 +2,34 @@ const fs = require('fs')
 const path = require('path')
 const babylon = require('babylon')
 const traverse = require('babel-traverse').default
-const { transformFromAst } = require('babel-core')
+const {
+  transformFromAst
+} = require('babel-core')
 
 function readCode(filePath) {
   // 读取文件内容
   const content = fs.readFileSync(filePath, 'utf-8')
   // 生成 AST
-  const ast = babylon.parse(content, { sourceType: 'module' })
+  const ast = babylon.parse(content, {
+    sourceType: 'module'
+  })
   // 寻找当前文件的依赖关系
   const dependencies = []
   traverse(
-    ast,
-    {
-      ImportDeclaration: ({ node }) => {
+    ast, {
+      ImportDeclaration: ({
+        node
+      }) => {
         dependencies.push(node.source.value)
       }
     }
   )
   // 通过 AST 将代码转为 ES5
-  const { code } = transformFromAst(ast, null, { presets: ['env'] })
+  const {
+    code
+  } = transformFromAst(ast, null, {
+    presets: ['env']
+  })
   return {
     filePath,
     dependencies,
@@ -43,7 +52,7 @@ function getDependencies(entry) {
       // CSS 文件逻辑就是将代码插入到 `style` 标签中
       if (/\.css$/.test(absolutePath)) {
         const content = fs.readFileSync(absolutePath, 'utf-8')
-        const code = 
+        const code =
           ` const style = document.createElement('style') style.innerText = ${JSON.stringify(content).replace(/\\r\\n/g, '')}
             document.head.appendChild(style) `
         dependencies.push({
@@ -52,15 +61,14 @@ function getDependencies(entry) {
           dependencies: [],
           code
         })
-      }
-      else {
+      } else {
         // JS 代码需要继续查找是否有依赖关系
         const child = readCode(absolutePath)
         child.relativePath = relativePath
         dependencies.push(child)
       }
     })
-  } 
+  }
   return dependencies
 }
 
@@ -87,3 +95,5 @@ function bundle(dependencies, entry) {
   // 当生成的内容写入到文件中
   fs.writeFileSync('./bundle.js', result)
 }
+
+bundle(getDependencies('./test/entry.js'), './test/entry.js')
